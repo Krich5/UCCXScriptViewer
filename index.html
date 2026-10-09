@@ -5469,8 +5469,6 @@ body:has(#uccx-viewer) main { padding:32px 0 80px; }
 #uccx-viewer .uccx-search-controls { display:flex;align-items:center;gap:8px;min-width:0; }
 #uccx-viewer .uccx-search-controls input { flex:1;min-width:0;width:100%; }
 #uccx-viewer #uccx-result { justify-self:end; }
-#uccx-viewer .uccx-design-actions { display:flex;align-items:center;gap:6px;margin-left:auto; }
-#uccx-viewer .uccx-design-actions .btn { font-size:11px;padding:5px 9px;white-space:nowrap; }
 @media(max-width:1000px) {
  #uccx-viewer .uccx-toolbar { grid-template-columns:minmax(0,1fr); }
  #uccx-viewer #uccx-result { justify-self:start; }
@@ -5530,6 +5528,8 @@ body:has(#uccx-viewer) main { padding:32px 0 80px; }
 #uccx-viewer .inline-assignment { color:#172336; }
 #uccx-viewer .step.active .inline-assignment { color:#fff; }
 
+#uccx-viewer .uccx-design>.pane-heading { padding:6px 12px;font-size:11px;line-height:16px; }
+
 body.uccx-standalone { font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; }
 body.uccx-standalone main { width:100%;margin-left:0;padding:28px 0 40px; }
 body.uccx-standalone:not(.dark-mode) { background:var(--bg); }
@@ -5574,10 +5574,7 @@ body.uccx-standalone:not(.dark-mode) { background:var(--bg); }
             </div>
             <div class="uccx-workspace">
               <div class="uccx-design">
-                <div class="pane-heading"><span>Script design</span><div class="uccx-design-actions">
-                  <button class="btn secondary" id="uccx-expand" type="button">Expand all</button>
-                  <button class="btn secondary" id="uccx-collapse" type="button">Collapse all</button>
-                </div></div>
+                <div class="pane-heading"><span>Script design</span></div>
                 <section class="uccx-content" id="uccx-content" role="tabpanel" aria-labelledby="uccx-tab-script"></section>
                 <section class="uccx-variable-pane" aria-label="Variables">
                   <div class="pane-heading"><span>Variables</span><input id="uccx-variable-search" type="search" aria-label="Filter variables" placeholder="Filter variables…" /></div>
@@ -5918,7 +5915,7 @@ function treeHTML(n){
  if(n.step&&branches)return '<details class="step-group" data-step-group="'+n.step.id+'" open><summary>'+stepHTML(n.step)+'</summary>'+branches+(unnamed.length?treeList(unnamed):'')+'</details>';
  return (n.step?'<div class="step-leaf">'+stepHTML(n.step)+'</div>':'')+branches+(unnamed.length?treeList(unnamed):'');
 }
-function render(){if(!model)return;let q=$('search').value.toLowerCase();$('expand').hidden=$('collapse').hidden=tab!=='script'||!!q;let html='';
+function render(){if(!model)return;let q=$('search').value.toLowerCase();let html='';
  if(tab==='script'){let steps=model.steps.filter(matches);$('result').textContent=steps.length+' steps';html=q||!model.tree?steps.map(stepHTML).join(''):treeList(model.tree.groups.flatMap(g=>g.nodes));}
  if(tab==='variables'){let vars=sortedVariables(model.variables.filter(v=>[v.name,v.type,v.value].join(' ').toLowerCase().includes(q)));$('result').textContent=vars.length+' variables';html='<table class="table"><thead><tr><th>Name</th><th>Type</th><th>Value</th></tr></thead><tbody>'+vars.map(v=>'<tr><td title="'+esc(v.name)+'">'+esc(v.name)+'</td><td title="'+esc(v.type)+'">'+esc(editorType(v))+'</td><td title="'+esc(v.value)+'">'+esc(v.value)+'</td></tr>').join('')+'</tbody></table>';}
  if(tab==='expressions'){let e=model.expressions.filter(v=>v.toLowerCase().includes(q));$('result').textContent=e.length+' unique expressions';html='<div class="empty">'+e.map(v=>'<div class="param">'+esc(v)+'</div>').join('')+'</div>';}
@@ -5973,7 +5970,7 @@ const tabs=Array.from(root.querySelectorAll('[data-tab]'));
 tabs.forEach((button,index)=>{
  button.onclick=()=>{tab=button.dataset.tab;$('search').value='';selected=null;updateTabs();render();};
  button.onkeydown=event=>{let next=index;if(event.key==='ArrowRight')next=(index+1)%tabs.length;else if(event.key==='ArrowLeft')next=(index+tabs.length-1)%tabs.length;else if(event.key==='Home')next=0;else if(event.key==='End')next=tabs.length-1;else return;event.preventDefault();tabs[next].click();tabs[next].focus();};
-});$('search').oninput=render;$('expand').onclick=()=>root.querySelectorAll('details.branch, details.step-group').forEach(d=>d.open=true);$('collapse').onclick=()=>root.querySelectorAll('details.branch, details.step-group').forEach(d=>d.open=false);
+});$('search').oninput=render;
 function load(buffer,name){try{if(buffer.byteLength>20*1024*1024)throw Error('File exceeds the 20 MB prototype limit');let next=window.UCCXAEF.parse(buffer,name);if(!next.steps.length)throw Error('No UCCX script steps found');resetSimulation();model=next;selected=null;tab='script';$('search').value='';$('variable-search').value='';updateTabs();$('filename').textContent=name;$('meta').innerHTML='<span><strong>'+model.steps.length+'</strong> steps</span><span><strong>'+model.variables.length+'</strong> variables</span><span><strong>'+model.expressions.length+'</strong> unique expressions</span><span class="muted">'+esc(model.workflowName!==model.name?'Internal name: '+model.workflowName:'')+'</span>';$('notice').textContent=model.warnings.join(' ');$('notice').classList.toggle('hidden',!model.warnings.length);$('loaded').hidden=false;$('upload').hidden=true;render();renderVariablePane();selectStep(model.steps[0].id);}catch(e){$('notice').textContent='Could not read this file: '+e.message+'. Other AEF versions or custom step formats may need additional support.';$('notice').classList.remove('hidden');}}
 $('open').onclick=()=>$('file').click();
 async function openFile(f){try{if(f.size>20*1024*1024)throw Error('Choose an AEF file smaller than 20 MB');if(!/\.aef$/i.test(f.name))throw Error('Choose a file with the .aef extension');$('open').disabled=true;$('open').textContent='Reading script…';load(await f.arrayBuffer(),f.name);}catch(e){$('notice').textContent=e.message;$('notice').classList.remove('hidden');}finally{$('open').disabled=false;$('open').textContent='Open .aef file';}}
