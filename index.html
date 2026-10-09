@@ -5530,6 +5530,10 @@ body:has(#uccx-viewer) main { padding:32px 0 80px; }
 
 #uccx-viewer .uccx-design>.pane-heading { padding:6px 12px;font-size:11px;line-height:16px; }
 
+#uccx-viewer .annotation-step .step-line { display:none; }
+#uccx-viewer .step-keyword { color:#08733b; }
+#uccx-viewer .step.active .step-keyword { color:#fff; }
+
 body.uccx-standalone { font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; }
 body.uccx-standalone main { width:100%;margin-left:0;padding:28px 0 40px; }
 body.uccx-standalone:not(.dark-mode) { background:var(--bg); }
@@ -5873,7 +5877,7 @@ const matches=s=>[s.title,s.summary,s.label,s.comment].join(' ').toLowerCase().i
 function editorSummary(s){
  const v=s.values;
  switch(s.type){
-  case 'StepStart':case 'StepEnd':case 'DayOfWeekStep':case 'TimeStep':return '';
+  case 'StepStart':case 'StepEnd':case 'StepComment':case 'DayOfWeekStep':case 'TimeStep':return '';
   case 'StepLabel':return (v[0]||s.label||'')+':';
   case 'StepGoto':return v[0]||'';
   case 'StepCallSubflow':return '('+[v[0],...(s.config.subflow?.outputs||[]).map(p=>p.name)].filter(Boolean).join(', ')+')';
@@ -5898,14 +5902,16 @@ function stepHTML(s){
  let decision=['StepIf','StepSwitch','MenuStep','TimeStep','DayOfWeekStep'].includes(s.type),call=['AcceptStep','RedirectStep','CreateCallStep','SelectResourceStep','TerminateStep','OutputStep'].includes(s.type);
  let icon=decision?'◇':s.type==='StepGoto'?'↪':s.type==='StepStart'?'⚑':s.type==='StepEnd'?'■':s.type==='StepAssign'?'=':s.type==='StepLabel'?'⚑':s.type==='StepCallSubflow'?'⇢':call?'☎':'·';
  const cisco=window.UCCXStepIcons?.resolve(s.config.contactSettings?'SetContactInfoStep':s.type,s.className);
- const annotation=s.comment?'<span class="step-annotation">'+esc(/^\s*\/\*/.test(s.comment)?s.comment:'/* '+s.comment+' */')+'</span>':'';
+ const notes=[s.comment,s.type==='StepComment'?s.values[0]:''].filter(Boolean);
+ const annotation=[...new Set(notes)].map(note=>'<span class="step-annotation">'+esc(/^\s*\/\*/.test(note)?note:'/* '+note+' */')+'</span>').join('');
+ const summary=s.type==='StepIf'?'('+esc(s.values[0])+') <span class="step-keyword">Then</span>':esc(editorSummary(s));
  const label=s.label&&s.type!=='StepLabel'?'<span class="step-label">'+esc(s.label)+':</span>':'';
  const outputs=(s.config.subflow?.outputs||[]).filter(p=>p.variable&&p.variable!=='null');
  const contactVariables=(s.config.contactAttributes||[]).filter(a=>a.variable&&a.variable!=='null').map(a=>a.variable);
  const contactAssignment=contactVariables.length?'<span class="inline-assignment">'+esc(contactVariables.join(', '))+' =</span>':'';
  const assignment=outputs.length?'<span class="step-assignment">'+outputs.map(p=>esc(p.variable)+' =').join('<br>')+'</span>':'';
  if(s.type==='StepStart')icon='<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 15 7 1" fill="none" stroke="#45596b" stroke-width="1.2"/><path d="m7 1 7 3-2 6-7-3Z" fill="#4ddddb" stroke="#087b83" stroke-width=".8"/><path d="m8 2 5 2-1 2-5-2Z" fill="#d7ffff"/></svg>';
- return '<button type="button" class="step'+(selected===s.id?' active':'')+(s.type==='StepLabel'?' label-step':s.type==='StepGoto'?' goto-step':s.type==='StepStart'?' start-step':'')+(simulation?.current===s.id?' running':'')+'" data-step="'+s.id+'" title="'+esc([s.title,s.label,editorSummary(s)].filter(Boolean).join(' — '))+'"><span class="stepicon '+(decision?'decision':call?'call':s.type==='StepLabel'?'label-icon':'')+'"'+(cisco?' data-cisco-icon="'+esc(cisco)+'"':'')+' aria-hidden="true">'+icon+'</span><span class="steptext">'+annotation+label+assignment+'<span class="step-line">'+contactAssignment+'<span class="stepname">'+esc(s.title)+'</span><span class="summary">'+esc(editorSummary(s))+'</span></span></span>'+'</button>';
+ return '<button type="button" class="step'+(selected===s.id?' active':'')+(s.type==='StepLabel'?' label-step':s.type==='StepGoto'?' goto-step':s.type==='StepStart'?' start-step':s.type==='StepComment'?' annotation-step':'')+(simulation?.current===s.id?' running':'')+'" data-step="'+s.id+'" title="'+esc([s.title,s.label,editorSummary(s)].filter(Boolean).join(' — '))+'"><span class="stepicon '+(decision?'decision':call?'call':s.type==='StepLabel'?'label-icon':'')+'"'+(cisco?' data-cisco-icon="'+esc(cisco)+'"':'')+' aria-hidden="true">'+icon+'</span><span class="steptext">'+annotation+label+assignment+'<span class="step-line">'+contactAssignment+'<span class="stepname">'+esc(s.title)+'</span><span class="summary">'+summary+'</span></span></span>'+'</button>';
 }
 function treeList(nodes){return '<ul class="tree-list">'+nodes.map(n=>'<li class="tree-node">'+treeHTML(n)+'</li>').join('')+'</ul>';}
 function branchIcon(){return '<svg class="branch-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="m5 1 8 4-5 10-7-4Z" fill="#ffe59b" stroke="#a77813" stroke-width=".8"/><path d="m5 1 1 3 7 1" fill="#fff4cb" stroke="#a77813" stroke-width=".7"/></svg>';}
