@@ -5431,6 +5431,21 @@ body:has(#uccx-viewer) main { padding:32px 0 80px; }
 #uccx-viewer .stepicon img { display:block;width:16px;height:16px;object-fit:contain; }
 #uccx-viewer .contact-attributes { margin-top:12px; }
 
+/* Light script canvas keeps the captured Cisco icons clear in either theme. */
+#uccx-viewer #uccx-content[aria-labelledby="uccx-tab-script"] {
+ --panel:#ffffff;
+ --fg:#253247;
+ --muted:#596579;
+ --border:#d2dae5;
+ --accent-blue:#155fba;
+ --input:#f1f5f9;
+ --card:#f1f5f9;
+ --uccx-selected:#dceafe;
+ background:var(--panel);
+ color:var(--fg);
+ color-scheme:light;
+}
+
 body.uccx-standalone { font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; }
 body.uccx-standalone main { width:100%;margin-left:0;padding:28px 0 40px; }
 body.uccx-standalone:not(.dark-mode) { background:var(--bg); }
