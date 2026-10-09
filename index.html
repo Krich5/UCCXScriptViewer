@@ -5511,6 +5511,22 @@ body:has(#uccx-viewer) main { padding:32px 0 80px; }
 #uccx-viewer .uccx-variable-list .table th:nth-child(2) { width:18%; }
 #uccx-viewer .uccx-variable-list .table th:last-child,#uccx-viewer .uccx-variable-list .table td:last-child { border-right:0; }
 
+/* Light editor headers, with controls that remain readable in dark mode. */
+#uccx-viewer .uccx-design { --panel:#fff;--fg:#253247;--muted:#596579;--border:#d2dae5;--card:#f1f5f9;--input:#fff;--accent-blue:#155fba;background:var(--panel);color:var(--fg);color-scheme:light; }
+#uccx-viewer .uccx-design .pane-heading { background:var(--card);color:var(--fg); }
+#uccx-viewer .uccx-design .btn { background:#fff;color:#253247;border:1px solid #ccd5df; }
+#uccx-viewer .uccx-design .btn:hover { background:#e5edf6; }
+#uccx-viewer .uccx-design input[type=search] { background:#fff;color:#253247; }
+/* Notes and labels precede their step, sharing its icon and selection. */
+#uccx-viewer .step { align-items:flex-start; }
+#uccx-viewer .steptext,#uccx-viewer .start-step .steptext { display:flex;flex-direction:column;align-items:flex-start;gap:0; }
+#uccx-viewer .step-line { display:flex;align-items:baseline;gap:3px; }
+#uccx-viewer .step-annotation { color:#667181;font:11px/16px ui-monospace,Menlo,monospace;white-space:pre; }
+#uccx-viewer .step-label { color:#1746c5;font:italic 11px/16px Tahoma,"Segoe UI",sans-serif; }
+#uccx-viewer .step-assignment { color:#172336;line-height:16px; }
+#uccx-viewer .step.active .step-annotation,#uccx-viewer .step.active .step-label,#uccx-viewer .step.active .step-assignment { color:#fff; }
+#uccx-viewer .schedule-properties { margin-top:12px; }
+
 body.uccx-standalone { font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; }
 body.uccx-standalone main { width:100%;margin-left:0;padding:28px 0 40px; }
 body.uccx-standalone:not(.dark-mode) { background:var(--bg); }
@@ -5649,6 +5665,13 @@ function modelAEF(parsed,name){
   if(bean?.class==='com.cisco.wf.steps.ivr.GetSessionInfoStep'||type==='GetCallContactInfoStep'){
    let a=args.find(v=>v?.kind==='array'),variables=list(a);c.callerVariable=readable(variables[0]);c.calledVariable=readable(variables[1]);
    c.contactAttributes=['Calling Number','Called Number','Arrival Type','Last Redirected Number','Original Called Number','Dialed Number'].map((name,i)=>({name,variable:readable(variables[i]??'')}));
+  }
+  if(type==='StepCallSubflow'&&args.slice(1,5).every(v=>v?.kind==='array')&&args.length>=5){
+   const inputValues=list(args[1]),inputNames=list(args[2]),outputNames=list(args[3]),outputVariables=list(args[4]);
+   if(inputValues.length===inputNames.length&&outputNames.length===outputVariables.length)c.subflow={
+    inputs:inputNames.map((v,i)=>({name:readable(v),value:readable(inputValues[i])})),
+    outputs:outputNames.map((v,i)=>({name:readable(v),variable:readable(outputVariables[i])}))
+   };
   }
   if(type==='ParseInputStep'){let a=args.filter(v=>short(v)==='TextExpression');c.inputVariable=readable(a[0]);}
   if(type==='GetReportingStatStep'){let a=args.filter(v=>short(v)==='TextExpression');c.resultVariable=readable(a[0]);}
@@ -5823,16 +5846,17 @@ const matches=s=>[s.title,s.summary,s.label,s.comment].join(' ').toLowerCase().i
 function editorSummary(s){
  const v=s.values;
  switch(s.type){
-  case 'StepStart':case 'StepEnd':return '';
+  case 'StepStart':case 'StepEnd':case 'DayOfWeekStep':case 'TimeStep':return '';
   case 'StepLabel':return (v[0]||s.label||'')+':';
   case 'StepGoto':return v[0]||'';
+  case 'StepCallSubflow':return '('+[v[0],...(s.config.subflow?.outputs||[]).map(p=>p.name)].filter(Boolean).join(', ')+')';
   case 'StepAssign':return v[0]+' = '+v[1];
   case 'StepIf':return '('+v[0]+') Then';
   case 'StepDelay':return v[0]?v[0]+' sec':'';
   case 'AcceptStep':case 'TerminateStep':return v.length?'('+v[0]+')':'';
   case 'OutputStep':return v.length?'('+v.slice(0,2).join(', ')+')':'';
   case 'SelectResourceStep':return v.length>=4?'('+v[0]+' from '+v[3]+')':s.summary;
-  default:return s.summary;
+  default:return s.config.contactAttributes?(v.length?'('+v[0]+')':''):s.summary;
  }
 }
 function editorType(v){const type=v.type.split('.').pop();return ({Integer:'int',Boolean:'boolean',Long:'long',Float:'float',Double:'double',Playable:'Prompt'})[type]||type;}
@@ -5841,22 +5865,25 @@ function stepHTML(s){
  let decision=['StepIf','StepSwitch','MenuStep','TimeStep','DayOfWeekStep'].includes(s.type),call=['AcceptStep','RedirectStep','CreateCallStep','SelectResourceStep','TerminateStep','OutputStep'].includes(s.type);
  let icon=decision?'◇':s.type==='StepGoto'?'↪':s.type==='StepStart'?'⚑':s.type==='StepEnd'?'■':s.type==='StepAssign'?'=':s.type==='StepLabel'?'⚑':s.type==='StepCallSubflow'?'⇢':call?'☎':'·';
  const cisco=window.UCCXStepIcons?.resolve(s.type,s.className);
- const annotation=s.type==='StepStart'&&s.comment?'<span class="start-annotation">'+esc(/^\s*\/\*/.test(s.comment)?s.comment:'/* '+s.comment+' */')+'</span>':'';
+ const annotation=s.comment?'<span class="step-annotation">'+esc(/^\s*\/\*/.test(s.comment)?s.comment:'/* '+s.comment+' */')+'</span>':'';
+ const label=s.label&&s.type!=='StepLabel'?'<span class="step-label">'+esc(s.label)+':</span>':'';
+ const outputs=(s.config.subflow?.outputs||[]).filter(p=>p.variable&&p.variable!=='null');
+ const assignment=outputs.length?'<span class="step-assignment">'+outputs.map(p=>esc(p.variable)+' =').join('<br>')+'</span>':'';
  if(s.type==='StepStart')icon='<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 15 7 1" fill="none" stroke="#45596b" stroke-width="1.2"/><path d="m7 1 7 3-2 6-7-3Z" fill="#4ddddb" stroke="#087b83" stroke-width=".8"/><path d="m8 2 5 2-1 2-5-2Z" fill="#d7ffff"/></svg>';
- return '<button type="button" class="step'+(selected===s.id?' active':'')+(s.type==='StepLabel'?' label-step':s.type==='StepGoto'?' goto-step':s.type==='StepStart'?' start-step':'')+(simulation?.current===s.id?' running':'')+'" data-step="'+s.id+'" title="'+esc([s.title,s.label,s.summary].filter(Boolean).join(' — '))+'"><span class="stepicon '+(decision?'decision':call?'call':s.type==='StepLabel'?'label-icon':'')+'"'+(cisco?' data-cisco-icon="'+esc(cisco)+'"':'')+' aria-hidden="true">'+icon+'</span><span class="steptext">'+annotation+'<span class="stepname">'+esc(s.title)+'</span>'+(s.label&&s.type!=='StepLabel'?'<span class="label">'+esc(s.label)+':</span>':'')+'<span class="summary">'+esc(editorSummary(s))+'</span></span>'+'</button>';
+ return '<button type="button" class="step'+(selected===s.id?' active':'')+(s.type==='StepLabel'?' label-step':s.type==='StepGoto'?' goto-step':s.type==='StepStart'?' start-step':'')+(simulation?.current===s.id?' running':'')+'" data-step="'+s.id+'" title="'+esc([s.title,s.label,s.summary].filter(Boolean).join(' — '))+'"><span class="stepicon '+(decision?'decision':call?'call':s.type==='StepLabel'?'label-icon':'')+'"'+(cisco?' data-cisco-icon="'+esc(cisco)+'"':'')+' aria-hidden="true">'+icon+'</span><span class="steptext">'+annotation+label+assignment+'<span class="step-line"><span class="stepname">'+esc(s.title)+'</span><span class="summary">'+esc(editorSummary(s))+'</span></span></span>'+'</button>';
 }
 function treeList(nodes){return '<ul class="tree-list">'+nodes.map(n=>'<li class="tree-node">'+treeHTML(n)+'</li>').join('')+'</ul>';}
 function branchIcon(){return '<svg class="branch-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="m5 1 8 4-5 10-7-4Z" fill="#ffe59b" stroke="#a77813" stroke-width=".8"/><path d="m5 1 1 3 7 1" fill="#fff4cb" stroke="#a77813" stroke-width=".7"/></svg>';}
 function treeHTML(n){
- const comment=n.step?.comment&&n.step.type!=='StepStart'?'<pre class="tree-comment">'+esc(n.step.comment)+'</pre>':'';
+
  const groups=n.groups.filter(g=>g.name);
  const unnamed=n.groups.filter(g=>!g.name).flatMap(g=>g.nodes);
  let branches=groups.length?'<ul class="tree-list tree-branches">'+groups.map(g=>{
   const label=branchIcon()+'<span>'+esc(g.name)+'</span>';
   return '<li class="tree-node branch-node">'+(g.nodes.length?'<details class="branch" open><summary>'+label+'</summary>'+treeList(g.nodes)+'</details>':'<div class="branch-label">'+label+'</div>')+'</li>';
  }).join('')+'</ul>':'';
- if(n.step&&branches)return '<details class="step-group" data-step-group="'+n.step.id+'" open><summary>'+stepHTML(n.step)+'</summary>'+comment+branches+(unnamed.length?treeList(unnamed):'')+'</details>';
- return (n.step?'<div class="step-leaf">'+stepHTML(n.step)+'</div>':'')+comment+branches+(unnamed.length?treeList(unnamed):'');
+ if(n.step&&branches)return '<details class="step-group" data-step-group="'+n.step.id+'" open><summary>'+stepHTML(n.step)+'</summary>'+branches+(unnamed.length?treeList(unnamed):'')+'</details>';
+ return (n.step?'<div class="step-leaf">'+stepHTML(n.step)+'</div>':'')+branches+(unnamed.length?treeList(unnamed):'');
 }
 function render(){if(!model)return;let q=$('search').value.toLowerCase();$('expand').hidden=$('collapse').hidden=tab!=='script'||!!q;let html='';
  if(tab==='script'){let steps=model.steps.filter(matches);$('result').textContent=steps.length+' steps';html=q||!model.tree?steps.map(stepHTML).join(''):treeList(model.tree.groups.flatMap(g=>g.nodes));}
@@ -5869,7 +5896,7 @@ function render(){if(!model)return;let q=$('search').value.toLowerCase();$('expa
 }
 function selectStep(id){return preservePagePosition(()=>selectStepContents(id));}
 function selectStepContents(id){let s=model.steps.find(s=>s.id===id);if(!s)return;selected=id;root.querySelectorAll('[data-step]').forEach(b=>b.classList.toggle('active',Number(b.dataset.step)===id));let jump=findGotoTarget(s);
- $('inspector').innerHTML='<div class="muted small">Step '+s.order+' · Saved ID '+esc(s.ciscoId)+'</div><h2>'+esc(s.title)+'</h2>'+(s.label?'<span class="label">'+esc(s.label)+'</span>':'')+(jump?'<div><button class="btn secondary jump" id="uccx-goto">Jump to '+esc(s.values[0])+' →</button></div>':'')+'<h3>Properties</h3>'+(s.config.days?'<div class="param">'+s.config.days.map(g=>esc(g.name)+': '+g.days.map((on,i)=>on?['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i]:null).filter(Boolean).join(', ')).join('<br>')+'</div>':'')+propertyHTML(s)+''+(s.comment?'<h3>Comment</h3><pre>'+esc(s.comment)+'</pre>':'')+(s.branches.some(Boolean)?'<h3>Branch names</h3><p>'+esc(s.branches.filter(Boolean).join(' / '))+'</p>':'');
+ $('inspector').innerHTML='<div class="muted small">Step '+s.order+' · Saved ID '+esc(s.ciscoId)+'</div><h2>'+esc(s.title)+'</h2>'+(s.label?'<span class="label">'+esc(s.label)+'</span>':'')+(jump?'<div><button class="btn secondary jump" id="uccx-goto">Jump to '+esc(s.values[0])+' →</button></div>':'')+'<h3>Properties</h3>'+propertyHTML(s)+''+(s.comment?'<h3>Comment</h3><pre>'+esc(s.comment)+'</pre>':'')+(s.branches.some(Boolean)?'<h3>Branch names</h3><p>'+esc(s.branches.filter(Boolean).join(' / '))+'</p>':'');
  if(jump)$('goto').onclick=()=>navigateToStep(jump.id);}
 function findGotoTarget(step){
  if(step?.type!=='StepGoto'||!step.values[0])return null;
@@ -5921,7 +5948,13 @@ $('file').onchange=async e=>{let f=e.target.files[0];if(f)await openFile(f);e.ta
 
 
 function propertyName(s,i){let names={StepAssign:['Variable','Value'],StepIf:['Condition'],StepGoto:['Target label'],StepLabel:['Label'],StepDelay:['Delay expression'],StepCallSubflow:['Script'],ConsultTransferStep:['Call Contact','Destination','Output Digits','Timeout'],OutputStep:['Call Contact','Prompt'],AcceptStep:['Call Contact'],StepComment:['Annotation']};return names[s.type]?.[i]||'Saved value '+(i+1);}
+function propertyField(name,value){return '<div class="param"><span class="property-name">'+esc(name)+'</span>'+esc(value)+'</div>';}
+function scheduleClock(ms){return String(Math.floor(ms/3600000)).padStart(2,'0')+':'+String(Math.floor(ms/60000)%60).padStart(2,'0');}
+function bindingTable(title,rows,valueKey,valueTitle){return '<h3>'+esc(title)+'</h3><table class="table"><thead><tr><th>Parameter</th><th>'+esc(valueTitle)+'</th></tr></thead><tbody>'+rows.map(p=>'<tr><td>'+esc(p.name)+'</td><td>'+esc(p[valueKey]||'—')+'</td></tr>').join('')+'</tbody></table>';}
 function propertyHTML(s){
+ if(s.config.days)return propertyField('Time Zone',s.config.timezone)+'<table class="table schedule-properties"><thead><tr><th>Connection</th><th>Days</th></tr></thead><tbody>'+s.config.days.map(g=>'<tr><td>'+esc(g.name)+'</td><td>'+g.days.map((on,i)=>on?['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'][i]:null).filter(Boolean).map(esc).join(', ')+'</td></tr>').join('')+'</tbody></table>';
+ if(s.config.times)return propertyField('Time Zone',s.config.timezone)+'<table class="table schedule-properties"><thead><tr><th>Connection</th><th>Time Ranges</th></tr></thead><tbody>'+s.config.times.map(g=>'<tr><td>'+esc(g.name)+'</td><td>'+(!g.ranges.length?'The rest':g.ranges.map(r=>r?esc(scheduleClock(r.start)+' – '+scheduleClock(r.end)):'Not decoded').join('<br>'))+'</td></tr>').join('')+'</tbody></table>';
+ if(s.config.subflow)return propertyField('Script',s.values[0])+bindingTable('Input Parameters',s.config.subflow.inputs,'value','Value')+bindingTable('Output Parameters',s.config.subflow.outputs,'variable','Variable')+s.values.slice(5).map((v,i)=>propertyField(propertyName(s,i+5),v)).join('');
  if(s.config.contactAttributes)return '<div class="param"><span class="property-name">Call Contact</span>'+esc(s.values[0])+'</div><table class="table contact-attributes"><thead><tr><th>Attribute</th><th>Variable</th></tr></thead><tbody>'+s.config.contactAttributes.map(a=>'<tr><td>'+esc(a.name)+'</td><td>'+esc(a.variable||'—')+'</td></tr>').join('')+'</tbody></table>';
  return s.values.length?s.values.map((v,i)=>'<div class="param"><span class="property-name">'+esc(propertyName(s,i))+'</span>'+esc(v)+'</div>').join(''):'<p class="muted">No expression properties for this step.</p>';
 }
