@@ -5417,15 +5417,36 @@ body:has(#uccx-viewer) main { padding:32px 0 80px; }
 #uccx-viewer .uccx-variable-list,
 #uccx-viewer .uccx-debug { overflow-anchor:none;overscroll-behavior:contain; }
 
-/* Native-style step expanders, with modern spacing and captured palette icons. */
-#uccx-viewer details.step-group { margin:0; }
-#uccx-viewer details.step-group>summary { display:flex;align-items:center;list-style:none;cursor:pointer; }
-#uccx-viewer details.step-group>summary::-webkit-details-marker { display:none; }
-#uccx-viewer details.step-group>summary::before { content:'⊞';width:18px;flex:none;text-align:center;font-size:14px;color:var(--muted); }
-#uccx-viewer details.step-group[open]>summary::before { content:'⊟'; }
-#uccx-viewer .step-leaf { padding-left:18px; }
+/* Compact Cisco-style tree: connected guides and boxed expanders. */
+#uccx-viewer .uccx-content { padding:4px 0; }
+#uccx-viewer .tree-list { margin:0;padding:0;list-style:none; }
+#uccx-viewer .tree-node { position:relative;padding-left:18px; }
+#uccx-viewer .tree-node::before { content:'';position:absolute;left:7px;top:0;bottom:0;border-left:1px dotted #a6afba;pointer-events:none; }
+#uccx-viewer .tree-node:last-child::before { bottom:auto;height:10px; }
+#uccx-viewer .tree-node::after { content:'';position:absolute;left:7px;top:10px;width:11px;border-top:1px dotted #a6afba;pointer-events:none; }
+#uccx-viewer details.step-group,#uccx-viewer details.branch { margin:0;border:0; }
+#uccx-viewer details.step-group>summary,#uccx-viewer details.branch>summary { position:relative;display:flex;align-items:center;list-style:none;cursor:pointer;padding:0;min-height:20px; }
+#uccx-viewer details.step-group>summary::-webkit-details-marker,#uccx-viewer details.branch>summary::-webkit-details-marker { display:none; }
+#uccx-viewer details.step-group>summary::before,#uccx-viewer details.branch>summary::before {
+ content:'+';position:absolute;left:-16px;top:5px;width:11px;height:11px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;
+ border:1px solid #8c98a6;border-radius:1px;background:var(--panel);color:var(--fg);font:11px/1 ui-monospace,Menlo,monospace;z-index:1;
+}
+#uccx-viewer details.step-group[open]>summary::before,#uccx-viewer details.branch[open]>summary::before { content:'−'; }
+#uccx-viewer .step-leaf { padding:0; }
+#uccx-viewer .step { min-height:20px;padding:1px 2px;gap:4px;font:12px/18px ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; }
 #uccx-viewer .step-group>summary .step { min-width:0; }
-#uccx-viewer .stepicon img { display:block;width:16px;height:16px;object-fit:contain; }
+#uccx-viewer .stepname { font-weight:500; }
+#uccx-viewer .steptext { gap:4px; }
+#uccx-viewer .summary { font:11px/18px ui-monospace,Menlo,monospace; }
+#uccx-viewer .stepicon { width:16px;height:16px; }
+#uccx-viewer .stepicon img,#uccx-viewer .stepicon svg { display:block;width:16px;height:16px;object-fit:contain; }
+#uccx-viewer details.branch>summary,#uccx-viewer .branch-label { min-height:20px;display:flex;align-items:center;gap:4px;padding:1px 2px;font:italic 12px/18px ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;font-weight:400;color:var(--fg); }
+#uccx-viewer .branch-icon { display:block;flex:none; }
+#uccx-viewer .tree-comment { margin:0 8px 3px 22px;padding:0;border:0;font:11px/15px ui-monospace,Menlo,monospace; }
+#uccx-viewer .start-step .stepname { color:#087b62; }
+#uccx-viewer .goto-step .stepname,#uccx-viewer .goto-step .summary { color:var(--accent-blue);font-style:italic; }
+#uccx-viewer .label-step .stepname { display:none; }
+#uccx-viewer .label-step .summary { color:var(--accent-blue);font-style:italic; }
 #uccx-viewer .contact-attributes { margin-top:12px; }
 
 /* Light script canvas keeps the captured Cisco icons clear in either theme. */
@@ -5769,18 +5790,25 @@ function preservePagePosition(update){
 const matches=s=>[s.title,s.summary,s.label,s.comment].join(' ').toLowerCase().includes($('search').value.toLowerCase());
 function stepHTML(s){
  let decision=['StepIf','StepSwitch','MenuStep','TimeStep','DayOfWeekStep'].includes(s.type),call=['AcceptStep','RedirectStep','CreateCallStep','SelectResourceStep','TerminateStep','OutputStep'].includes(s.type);
- let icon=decision?'◇':s.type==='StepGoto'?'↪':s.type==='StepStart'?'▶':s.type==='StepEnd'?'■':s.type==='StepAssign'?'=':s.type==='StepLabel'?'⚑':s.type==='StepCallSubflow'?'⇢':call?'☎':'·';
+ let icon=decision?'◇':s.type==='StepGoto'?'↪':s.type==='StepStart'?'⚑':s.type==='StepEnd'?'■':s.type==='StepAssign'?'=':s.type==='StepLabel'?'⚑':s.type==='StepCallSubflow'?'⇢':call?'☎':'·';
  const cisco=window.UCCXStepIcons?.resolve(s.type,s.className);
- return '<button type="button" class="step'+(selected===s.id?' active':'')+(s.type==='StepLabel'?' label-step':'')+(simulation?.current===s.id?' running':'')+'" data-step="'+s.id+'" title="'+esc([s.title,s.label,s.summary].filter(Boolean).join(' — '))+'"><span class="stepicon '+(decision?'decision':call?'call':s.type==='StepLabel'?'label-icon':'')+'"'+(cisco?' data-cisco-icon="'+esc(cisco)+'"':'')+' aria-hidden="true">'+icon+'</span><span class="steptext"><span class="stepname">'+esc(s.title)+'</span>'+(s.label?'<span class="label">'+esc(s.label)+'</span>':'')+'<span class="summary">'+esc(s.summary)+'</span></span>'+(s.comment?'<span class="comment-marker" aria-label="Has comment">ⓘ</span>':'')+'</button>';
+ if(s.type==='StepStart')icon='<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 15 7 1" fill="none" stroke="#45596b" stroke-width="1.2"/><path d="m7 1 7 3-2 6-7-3Z" fill="#4ddddb" stroke="#087b83" stroke-width=".8"/><path d="m8 2 5 2-1 2-5-2Z" fill="#d7ffff"/></svg>';
+ return '<button type="button" class="step'+(selected===s.id?' active':'')+(s.type==='StepLabel'?' label-step':s.type==='StepGoto'?' goto-step':s.type==='StepStart'?' start-step':'')+(simulation?.current===s.id?' running':'')+'" data-step="'+s.id+'" title="'+esc([s.title,s.label,s.summary].filter(Boolean).join(' — '))+'"><span class="stepicon '+(decision?'decision':call?'call':s.type==='StepLabel'?'label-icon':'')+'"'+(cisco?' data-cisco-icon="'+esc(cisco)+'"':'')+' aria-hidden="true">'+icon+'</span><span class="steptext"><span class="stepname">'+esc(s.title)+'</span>'+(s.label?'<span class="label">'+esc(s.label)+'</span>':'')+'<span class="summary">'+esc(s.summary)+'</span></span>'+(s.comment?'<span class="comment-marker" aria-label="Has comment">ⓘ</span>':'')+'</button>';
 }
+function treeList(nodes){return '<ul class="tree-list">'+nodes.map(n=>'<li class="tree-node">'+treeHTML(n)+'</li>').join('')+'</ul>';}
+function branchIcon(){return '<svg class="branch-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="m5 1 8 4-5 10-7-4Z" fill="#ffe59b" stroke="#a77813" stroke-width=".8"/><path d="m5 1 1 3 7 1" fill="#fff4cb" stroke="#a77813" stroke-width=".7"/></svg>';}
 function treeHTML(n){
  const comment=n.step?.comment?'<pre class="tree-comment">'+esc(n.step.comment)+'</pre>':'';
- let branches='';for(let g of n.groups)if(g.nodes.length)branches+='<details class="branch" open><summary>'+esc(g.name)+' <span class="muted">('+g.nodes.length+')</span></summary><ul>'+g.nodes.map(c=>'<li>'+treeHTML(c)+'</li>').join('')+'</ul></details>';
+ const groups=n.groups.filter(g=>g.nodes.length||g.name);
+ let branches=groups.length?'<ul class="tree-list tree-branches">'+groups.map(g=>{
+  const label=branchIcon()+'<span>'+esc(g.name||'Branch')+'</span>';
+  return '<li class="tree-node branch-node">'+(g.nodes.length?'<details class="branch" open><summary>'+label+'</summary>'+treeList(g.nodes)+'</details>':'<div class="branch-label">'+label+'</div>')+'</li>';
+ }).join('')+'</ul>':'';
  if(n.step&&branches)return '<details class="step-group" data-step-group="'+n.step.id+'" open><summary>'+stepHTML(n.step)+'</summary>'+comment+branches+'</details>';
  return (n.step?'<div class="step-leaf">'+stepHTML(n.step)+'</div>':'')+comment+branches;
 }
 function render(){if(!model)return;let q=$('search').value.toLowerCase();$('expand').hidden=$('collapse').hidden=tab!=='script'||!!q;let html='';
- if(tab==='script'){let steps=model.steps.filter(matches);$('result').textContent=steps.length+' steps';html=q||!model.tree?steps.map(stepHTML).join(''):model.tree.groups.flatMap(g=>g.nodes).map(treeHTML).join('');}
+ if(tab==='script'){let steps=model.steps.filter(matches);$('result').textContent=steps.length+' steps';html=q||!model.tree?steps.map(stepHTML).join(''):treeList(model.tree.groups.flatMap(g=>g.nodes));}
  if(tab==='variables'){let vars=model.variables.filter(v=>[v.name,v.type,v.value].join(' ').toLowerCase().includes(q));$('result').textContent=vars.length+' variables';html='<table class="table"><thead><tr><th>Name</th><th>Type</th><th>Saved default</th></tr></thead><tbody>'+vars.map(v=>'<tr><td>'+esc(v.name)+'</td><td>'+esc(v.type)+'</td><td>'+esc(v.value)+'</td></tr>').join('')+'</tbody></table>';}
  if(tab==='expressions'){let e=model.expressions.filter(v=>v.toLowerCase().includes(q));$('result').textContent=e.length+' unique expressions';html='<div class="empty">'+e.map(v=>'<div class="param">'+esc(v)+'</div>').join('')+'</div>';}
  if(tab==='subflows'){let s=model.steps.filter(s=>s.type==='StepCallSubflow'&&matches(s));$('result').textContent=s.length+' calls';html='<div class="empty muted">Referenced scripts are separate files. Open those .aef files to inspect their logic.</div>'+s.map(stepHTML).join('');}
