@@ -5684,6 +5684,10 @@ function modelAEF(parsed,name){
     expanded:arrays[3].map((v,i)=>({value:readable(v),name:readable(arrays[4][i]),type:readable(arrays[5][i]),token:readable(arrays[6][i])}))
    };
   }
+  if(type==='RedirectStep'&&args.length>=3){
+   const blocks=ann(bean).filter(v=>v?.kind==='block'),flag=blocks.at(-1)?.hex;
+   c.redirect={contact:readable(args[0]),destination:readable(args[1]),resetAddress:readable(args[2]),calledAddressMode:flag==='01'?'Reset To':flag==='00'?'Preserve':null};
+  }
   if(type==='HandledSessionStep'&&args[1]?.kind==='array'&&list(args[1]).length===3){
    const values=list(args[1]);
    c.contactSettings={contact:readable(args[0]),attributes:['Language','Handled','Session'].map((name,i)=>({name,value:readable(values[i])}))};
@@ -5879,6 +5883,7 @@ function editorSummary(s){
   case 'AcceptStep':case 'TerminateStep':return v.length?'('+v[0]+')':'';
   case 'OutputStep':return v.length?'('+v.slice(0,2).join(', ')+')':'';
   case 'SelectResourceStep':return v.length>=4?'('+v[0]+' from '+v[3]+')':s.summary;
+  case 'RedirectStep':return v.length>=2?'('+v[0]+' to '+v[1]+')':s.summary;
   case 'StepSwitch':return s.config.switch?'('+s.config.switch.expression+')':s.summary;
   case 'SetGED125DataStep':return s.config.enterprise?'('+s.config.enterprise.contact+') Variables Used: '+[...s.config.enterprise.fields,...s.config.enterprise.expanded].map(p=>p.value).join(', '):s.summary;
   case 'HandledSessionStep':return s.config.contactSettings?'('+[s.config.contactSettings.contact,...s.config.contactSettings.attributes.filter(a=>a.value!=='').map(a=>a.name.toLowerCase())].join(', ')+')':s.summary;
@@ -5977,11 +5982,13 @@ async function openFile(f){try{if(f.size>20*1024*1024)throw Error('Choose an AEF
 $('file').onchange=async e=>{let f=e.target.files[0];if(f)await openFile(f);e.target.value='';};document.addEventListener('dragover',e=>{if(!Array.from(e.dataTransfer?.types||[]).includes('Files'))return;e.preventDefault();root.classList.add('is-dragging');});document.addEventListener('dragleave',()=>root.classList.remove('is-dragging'));document.addEventListener('drop',async e=>{if(!e.dataTransfer.files.length)return;e.preventDefault();root.classList.remove('is-dragging');let f=e.dataTransfer.files[0];if(f)await openFile(f);});
 
 
-function propertyName(s,i){let names={StepAssign:['Variable','Value'],StepIf:['Condition'],StepGoto:['Target label'],StepLabel:['Label'],StepDelay:['Delay expression'],StepCallSubflow:['Script'],ConsultTransferStep:['Call Contact','Destination','Output Digits','Timeout'],OutputStep:['Call Contact','Prompt'],AcceptStep:['Call Contact'],StepComment:['Annotation']};return names[s.type]?.[i]||'Saved value '+(i+1);}
+function propertyName(s,i){let names={StepAssign:['Variable','Value'],StepIf:['Condition'],StepGoto:['Target label'],StepLabel:['Label'],StepDelay:['Delay expression'],StepCallSubflow:['Script'],RedirectStep:['Call Contact','Destination','Called Address'],ConsultTransferStep:['Call Contact','Destination','Output Digits','Timeout'],OutputStep:['Call Contact','Prompt'],AcceptStep:['Call Contact'],StepComment:['Annotation']};return names[s.type]?.[i]||'Saved value '+(i+1);}
 function propertyField(name,value){return '<div class="param"><span class="property-name">'+esc(name)+'</span>'+esc(value)+'</div>';}
 function scheduleClock(ms){const hour=Math.floor(ms/3600000)%24;return (hour%12||12)+':'+String(Math.floor(ms/60000)%60).padStart(2,'0')+' '+(hour<12?'AM':'PM');}
 function bindingTable(title,rows,valueKey,valueTitle){return '<h3>'+esc(title)+'</h3><table class="table"><thead><tr><th>Parameter</th><th>'+esc(valueTitle)+'</th></tr></thead><tbody>'+rows.map(p=>'<tr><td>'+esc(p.name)+'</td><td>'+esc(p[valueKey]||'—')+'</td></tr>').join('')+'</tbody></table>';}
 function propertyHTML(s){
+ if(s.config.redirect){const r=s.config.redirect;return propertyField('Call Contact',r.contact)+propertyField('Destination',r.destination)+propertyField('Called Address',r.calledAddressMode||'Not decoded')+(r.calledAddressMode!=='Preserve'?propertyField('Reset To',r.resetAddress):'');}
+
  if(s.config.contactSettings)return propertyField('Contact',s.config.contactSettings.contact)+'<table class="table contact-attributes"><thead><tr><th>Names</th><th>Values</th></tr></thead><tbody>'+s.config.contactSettings.attributes.map(a=>'<tr><td>'+esc(a.name)+'</td><td>'+esc(a.value||'—')+'</td></tr>').join('')+'</tbody></table>';
 
  if(s.config.switch)return propertyField('Expression',s.config.switch.expression)+propertyField('Type',s.config.switch.type||'Not decoded')+'<table class="table"><thead><tr><th>Connection</th><th>Value</th></tr></thead><tbody>'+s.config.switch.cases.map(p=>'<tr><td>'+esc(p.name)+'</td><td>'+esc(p.value)+'</td></tr>').join('')+'</tbody></table>';
