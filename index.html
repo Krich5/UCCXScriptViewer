@@ -5479,6 +5479,38 @@ body:has(#uccx-viewer) main { padding:32px 0 80px; }
  #uccx-viewer .uccx-search-controls input { flex-basis:auto; }
 }
 
+/* Match the editor's text density and step signatures. */
+#uccx-viewer #uccx-content[aria-labelledby="uccx-tab-script"] .tree-list { width:max-content;min-width:100%; }
+#uccx-viewer .tree-node { padding-left:18px; }
+#uccx-viewer .tree-node:last-child::before { height:8px; }
+#uccx-viewer .tree-node::after { top:8px; }
+#uccx-viewer details.step-group>summary,#uccx-viewer details.branch>summary { min-height:16px; }
+#uccx-viewer details.step-group>summary::before,#uccx-viewer details.branch>summary::before { top:3px;width:10px;height:10px;font-size:10px; }
+#uccx-viewer .step { width:max-content;max-width:100%;min-height:16px;padding:0 2px;gap:3px;font:11px/16px Tahoma,"Segoe UI",sans-serif; }
+#uccx-viewer .steptext { gap:3px;flex:none; }
+#uccx-viewer .stepname { font-weight:400;color:#08733b; }
+#uccx-viewer .summary { font:inherit;color:#172336;overflow:visible;text-overflow:clip; }
+#uccx-viewer .label { padding:0;border-radius:0;background:transparent;font:italic 11px/16px Tahoma,"Segoe UI",sans-serif; }
+#uccx-viewer .goto-step .stepname { color:#08733b;font-style:normal; }
+#uccx-viewer .goto-step .summary,#uccx-viewer .label-step .summary { color:#1746c5;font-style:italic; }
+#uccx-viewer details.branch>summary,#uccx-viewer .branch-label { min-height:16px;padding:0 2px;gap:3px;color:#a54323;font:italic 11px/16px Tahoma,"Segoe UI",sans-serif; }
+#uccx-viewer .step.active { background:#0879d2;box-shadow:none; }
+#uccx-viewer .step.active .stepname,#uccx-viewer .step.active .summary,#uccx-viewer .step.active .label { color:#fff; }
+#uccx-viewer .start-step { align-items:flex-start; }
+#uccx-viewer .start-step .steptext { display:flex;flex-direction:column;align-items:flex-start;gap:0; }
+#uccx-viewer .start-step .summary:empty { display:none; }
+#uccx-viewer .start-annotation { color:#667181;font:11px/16px ui-monospace,Menlo,monospace;white-space:pre-wrap;max-width:650px; }
+#uccx-viewer .start-step.active .start-annotation { color:#fff; }
+#uccx-viewer .tree-comment { margin:0 8px 2px 21px;font:11px/15px ui-monospace,Menlo,monospace; }
+/* The variables grid uses the editor's light canvas and compact cells. */
+#uccx-viewer .uccx-variable-list { --panel:#fff;--fg:#253247;--muted:#596579;--border:#d2dae5;--card:#f4f6f8;--input:#fff;background:var(--panel);color:var(--fg);color-scheme:light; }
+#uccx-viewer .uccx-variable-list .table { table-layout:fixed; }
+#uccx-viewer .uccx-variable-list .table th,#uccx-viewer .uccx-variable-list .table td { padding:2px 6px;line-height:16px;border-right:1px solid var(--border);font:11px/16px Tahoma,"Segoe UI",sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+#uccx-viewer .uccx-variable-list .table th { font-weight:400; }
+#uccx-viewer .uccx-variable-list .table th:nth-child(1) { width:35%; }
+#uccx-viewer .uccx-variable-list .table th:nth-child(2) { width:18%; }
+#uccx-viewer .uccx-variable-list .table th:last-child,#uccx-viewer .uccx-variable-list .table td:last-child { border-right:0; }
+
 body.uccx-standalone { font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; }
 body.uccx-standalone main { width:100%;margin-left:0;padding:28px 0 40px; }
 body.uccx-standalone:not(.dark-mode) { background:var(--bg); }
@@ -5788,17 +5820,35 @@ function preservePagePosition(update){
  }
 }
 const matches=s=>[s.title,s.summary,s.label,s.comment].join(' ').toLowerCase().includes($('search').value.toLowerCase());
+function editorSummary(s){
+ const v=s.values;
+ switch(s.type){
+  case 'StepStart':case 'StepEnd':return '';
+  case 'StepLabel':return (v[0]||s.label||'')+':';
+  case 'StepGoto':return v[0]||'';
+  case 'StepAssign':return v[0]+' = '+v[1];
+  case 'StepIf':return '('+v[0]+') Then';
+  case 'StepDelay':return v[0]?v[0]+' sec':'';
+  case 'AcceptStep':case 'TerminateStep':return v.length?'('+v[0]+')':'';
+  case 'OutputStep':return v.length?'('+v.slice(0,2).join(', ')+')':'';
+  case 'SelectResourceStep':return v.length>=4?'('+v[0]+' from '+v[3]+')':s.summary;
+  default:return s.summary;
+ }
+}
+function editorType(v){const type=v.type.split('.').pop();return ({Integer:'int',Boolean:'boolean',Long:'long',Float:'float',Double:'double',Playable:'Prompt'})[type]||type;}
+function sortedVariables(rows){return [...rows].sort((a,b)=>a.name.toLowerCase().localeCompare(b.name.toLowerCase())||a.name.localeCompare(b.name));}
 function stepHTML(s){
  let decision=['StepIf','StepSwitch','MenuStep','TimeStep','DayOfWeekStep'].includes(s.type),call=['AcceptStep','RedirectStep','CreateCallStep','SelectResourceStep','TerminateStep','OutputStep'].includes(s.type);
  let icon=decision?'◇':s.type==='StepGoto'?'↪':s.type==='StepStart'?'⚑':s.type==='StepEnd'?'■':s.type==='StepAssign'?'=':s.type==='StepLabel'?'⚑':s.type==='StepCallSubflow'?'⇢':call?'☎':'·';
  const cisco=window.UCCXStepIcons?.resolve(s.type,s.className);
+ const annotation=s.type==='StepStart'&&s.comment?'<span class="start-annotation">'+esc(/^\s*\/\*/.test(s.comment)?s.comment:'/* '+s.comment+' */')+'</span>':'';
  if(s.type==='StepStart')icon='<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 15 7 1" fill="none" stroke="#45596b" stroke-width="1.2"/><path d="m7 1 7 3-2 6-7-3Z" fill="#4ddddb" stroke="#087b83" stroke-width=".8"/><path d="m8 2 5 2-1 2-5-2Z" fill="#d7ffff"/></svg>';
- return '<button type="button" class="step'+(selected===s.id?' active':'')+(s.type==='StepLabel'?' label-step':s.type==='StepGoto'?' goto-step':s.type==='StepStart'?' start-step':'')+(simulation?.current===s.id?' running':'')+'" data-step="'+s.id+'" title="'+esc([s.title,s.label,s.summary].filter(Boolean).join(' — '))+'"><span class="stepicon '+(decision?'decision':call?'call':s.type==='StepLabel'?'label-icon':'')+'"'+(cisco?' data-cisco-icon="'+esc(cisco)+'"':'')+' aria-hidden="true">'+icon+'</span><span class="steptext"><span class="stepname">'+esc(s.title)+'</span>'+(s.label?'<span class="label">'+esc(s.label)+'</span>':'')+'<span class="summary">'+esc(s.summary)+'</span></span>'+(s.comment?'<span class="comment-marker" aria-label="Has comment">ⓘ</span>':'')+'</button>';
+ return '<button type="button" class="step'+(selected===s.id?' active':'')+(s.type==='StepLabel'?' label-step':s.type==='StepGoto'?' goto-step':s.type==='StepStart'?' start-step':'')+(simulation?.current===s.id?' running':'')+'" data-step="'+s.id+'" title="'+esc([s.title,s.label,s.summary].filter(Boolean).join(' — '))+'"><span class="stepicon '+(decision?'decision':call?'call':s.type==='StepLabel'?'label-icon':'')+'"'+(cisco?' data-cisco-icon="'+esc(cisco)+'"':'')+' aria-hidden="true">'+icon+'</span><span class="steptext">'+annotation+'<span class="stepname">'+esc(s.title)+'</span>'+(s.label&&s.type!=='StepLabel'?'<span class="label">'+esc(s.label)+':</span>':'')+'<span class="summary">'+esc(editorSummary(s))+'</span></span>'+'</button>';
 }
 function treeList(nodes){return '<ul class="tree-list">'+nodes.map(n=>'<li class="tree-node">'+treeHTML(n)+'</li>').join('')+'</ul>';}
 function branchIcon(){return '<svg class="branch-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="m5 1 8 4-5 10-7-4Z" fill="#ffe59b" stroke="#a77813" stroke-width=".8"/><path d="m5 1 1 3 7 1" fill="#fff4cb" stroke="#a77813" stroke-width=".7"/></svg>';}
 function treeHTML(n){
- const comment=n.step?.comment?'<pre class="tree-comment">'+esc(n.step.comment)+'</pre>':'';
+ const comment=n.step?.comment&&n.step.type!=='StepStart'?'<pre class="tree-comment">'+esc(n.step.comment)+'</pre>':'';
  const groups=n.groups.filter(g=>g.name);
  const unnamed=n.groups.filter(g=>!g.name).flatMap(g=>g.nodes);
  let branches=groups.length?'<ul class="tree-list tree-branches">'+groups.map(g=>{
@@ -5810,7 +5860,7 @@ function treeHTML(n){
 }
 function render(){if(!model)return;let q=$('search').value.toLowerCase();$('expand').hidden=$('collapse').hidden=tab!=='script'||!!q;let html='';
  if(tab==='script'){let steps=model.steps.filter(matches);$('result').textContent=steps.length+' steps';html=q||!model.tree?steps.map(stepHTML).join(''):treeList(model.tree.groups.flatMap(g=>g.nodes));}
- if(tab==='variables'){let vars=model.variables.filter(v=>[v.name,v.type,v.value].join(' ').toLowerCase().includes(q));$('result').textContent=vars.length+' variables';html='<table class="table"><thead><tr><th>Name</th><th>Type</th><th>Saved default</th></tr></thead><tbody>'+vars.map(v=>'<tr><td>'+esc(v.name)+'</td><td>'+esc(v.type)+'</td><td>'+esc(v.value)+'</td></tr>').join('')+'</tbody></table>';}
+ if(tab==='variables'){let vars=sortedVariables(model.variables.filter(v=>[v.name,v.type,v.value].join(' ').toLowerCase().includes(q)));$('result').textContent=vars.length+' variables';html='<table class="table"><thead><tr><th>Name</th><th>Type</th><th>Value</th></tr></thead><tbody>'+vars.map(v=>'<tr><td title="'+esc(v.name)+'">'+esc(v.name)+'</td><td title="'+esc(v.type)+'">'+esc(editorType(v))+'</td><td title="'+esc(v.value)+'">'+esc(v.value)+'</td></tr>').join('')+'</tbody></table>';}
  if(tab==='expressions'){let e=model.expressions.filter(v=>v.toLowerCase().includes(q));$('result').textContent=e.length+' unique expressions';html='<div class="empty">'+e.map(v=>'<div class="param">'+esc(v)+'</div>').join('')+'</div>';}
  if(tab==='subflows'){let s=model.steps.filter(s=>s.type==='StepCallSubflow'&&matches(s));$('result').textContent=s.length+' calls';html='<div class="empty muted">Referenced scripts are separate files. Open those .aef files to inspect their logic.</div>'+s.map(stepHTML).join('');}
  $('content').innerHTML=html||'<div class="empty">No matches.</div>';if(!selected) $('inspector').innerHTML='<h2>Step properties</h2><p class="muted">Select a step in the design tree to inspect it.</p><p class="muted">Expand branch names to follow the flow. Select a Goto step to jump to its label. Saved variable values are listed below the tree.</p>';
@@ -5875,7 +5925,7 @@ function propertyHTML(s){
  if(s.config.contactAttributes)return '<div class="param"><span class="property-name">Call Contact</span>'+esc(s.values[0])+'</div><table class="table contact-attributes"><thead><tr><th>Attribute</th><th>Variable</th></tr></thead><tbody>'+s.config.contactAttributes.map(a=>'<tr><td>'+esc(a.name)+'</td><td>'+esc(a.variable||'—')+'</td></tr>').join('')+'</tbody></table>';
  return s.values.length?s.values.map((v,i)=>'<div class="param"><span class="property-name">'+esc(propertyName(s,i))+'</span>'+esc(v)+'</div>').join(''):'<p class="muted">No expression properties for this step.</p>';
 }
-function renderVariablePane(){if(!model)return;let q=$('variable-search').value.toLowerCase();let rows=model.variables.filter(v=>[v.name,v.type,v.value].join(' ').toLowerCase().includes(q));$('variable-list').innerHTML='<table class="table"><thead><tr><th>Name</th><th>Type</th><th>Saved value</th>'+(simulation?'<th>Simulated value</th>':'')+'</tr></thead><tbody>'+rows.map(v=>'<tr><td>'+esc(v.name)+'</td><td title="'+esc(v.type)+'">'+esc(v.type.split('.').pop())+'</td><td>'+esc(v.value)+'</td>'+(simulation?'<td><input class="runtime-value" data-runtime-var="'+esc(v.name)+'" aria-label="Simulated '+esc(v.name)+'" placeholder="Unknown" value="'+esc(simulation.variables.has(v.name)?JSON.stringify(simulation.variables.get(v.name)):'')+'" /></td>':'')+'</tr>').join('')+'</tbody></table>';
+function renderVariablePane(){if(!model)return;let q=$('variable-search').value.toLowerCase();let rows=sortedVariables(model.variables.filter(v=>[v.name,v.type,v.value].join(' ').toLowerCase().includes(q)));$('variable-list').innerHTML='<table class="table"><thead><tr><th>Name</th><th>Type</th><th>Value</th>'+(simulation?'<th>Simulated value</th>':'')+'</tr></thead><tbody>'+rows.map(v=>'<tr><td title="'+esc(v.name)+'">'+esc(v.name)+'</td><td title="'+esc(v.type)+'">'+esc(editorType(v))+'</td><td title="'+esc(v.value)+'">'+esc(v.value)+'</td>'+(simulation?'<td><input class="runtime-value" data-runtime-var="'+esc(v.name)+'" aria-label="Simulated '+esc(v.name)+'" placeholder="Unknown" value="'+esc(simulation.variables.has(v.name)?JSON.stringify(simulation.variables.get(v.name)):'')+'" /></td>':'')+'</tr>').join('')+'</tbody></table>';
  $('variable-list').querySelectorAll('[data-runtime-var]').forEach(input=>input.onchange=()=>{try{simulation.set(input.dataset.runtimeVar,runtimeValue(input.value));$('sim-status').textContent='Simulated value updated for '+input.dataset.runtimeVar;}catch(e){$('sim-status').textContent=e.message;}});
 }
 $('variable-search').oninput=renderVariablePane;
