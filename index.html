@@ -5687,6 +5687,10 @@ function modelAEF(parsed,name){
     expanded:arrays[3].map((v,i)=>({value:readable(v),name:readable(arrays[4][i]),type:readable(arrays[5][i]),token:readable(arrays[6][i])}))
    };
   }
+  if(type==='HandledSessionStep'&&args[1]?.kind==='array'&&list(args[1]).length===3){
+   const values=list(args[1]);
+   c.contactSettings={contact:readable(args[0]),attributes:['Language','Handled','Session'].map((name,i)=>({name,value:readable(values[i])}))};
+  }
   if(type==='SetPriorityStep'){
    const blocks=ann(bean).filter(v=>v?.kind==='block'),code=blocks.at(-1)?.hex;
    c.priority={contact:readable(args[0]),value:readable(args[1]),operation:code==='00000000'?'Assign':null,code};
@@ -5700,6 +5704,7 @@ function modelAEF(parsed,name){
  let config=configuration(bean,args);let type=short(bean), title=({StepAssign:'Set',StepIf:'If',StepGoto:'Goto',StepStart:'Start',StepEnd:'End',StepDelay:'Delay',StepLabel:'Label',OutputStep:'Play Prompt',ParseInputStep:'Get Digit String',SelectResourceStep:'Select Resource',StepCallSubflow:'Call Subflow',RedirectStep:'Call Redirect',TerminateStep:'Terminate',TimeStep:'Time of Day',DayOfWeekStep:'Day of Week',StepComment:'Annotate',ConsultTransferStep:'Call Consult Transfer'})[type]||type.replace(/^Step/,'').replace(/Step$/,'').replace(/([a-z])([A-Z])/g,'$1 $2');
  if(config.contactAttributes)title='Get Call Contact Info';
  if(config.enterprise)title='Set Enterprise Call Info';
+ if(config.contactSettings)title='Set Contact Info';
  if(config.switch?.type)title='Switch '+config.switch.type;
  title=({HoldStep:'Call Hold',UnholdStep:'Call Unhold',StepInc:'Increment',StepDec:'Decrement'})[type]||title;
  let values=args.map(x=>readable(x));let summary=type==='StepAssign'?values[0]+' = '+values[1]:values.join(' · ');
@@ -5879,6 +5884,7 @@ function editorSummary(s){
   case 'SelectResourceStep':return v.length>=4?'('+v[0]+' from '+v[3]+')':s.summary;
   case 'StepSwitch':return s.config.switch?'('+s.config.switch.expression+')':s.summary;
   case 'SetGED125DataStep':return s.config.enterprise?'('+s.config.enterprise.contact+') Variables Used: '+[...s.config.enterprise.fields,...s.config.enterprise.expanded].map(p=>p.value).join(', '):s.summary;
+  case 'HandledSessionStep':return s.config.contactSettings?'('+[s.config.contactSettings.contact,...s.config.contactSettings.attributes.filter(a=>a.value!=='').map(a=>a.name.toLowerCase())].join(', ')+')':s.summary;
   case 'SetPriorityStep':return s.config.priority?'('+s.config.priority.contact+', '+(s.config.priority.operation||'Operation not decoded')+': '+s.config.priority.value+')':s.summary;
   case 'HoldStep':case 'UnholdStep':return v.length?'('+v[0]+')':'';
   default:{const attributes=s.config.contactAttributes?.filter(a=>a.variable&&a.variable!=='null');return attributes?'('+[v[0],...(attributes.length===1?[attributes[0].name]:[])].join(', ')+')':s.summary;}
@@ -5889,7 +5895,7 @@ function sortedVariables(rows){return [...rows].sort((a,b)=>a.name.toLowerCase()
 function stepHTML(s){
  let decision=['StepIf','StepSwitch','MenuStep','TimeStep','DayOfWeekStep'].includes(s.type),call=['AcceptStep','RedirectStep','CreateCallStep','SelectResourceStep','TerminateStep','OutputStep'].includes(s.type);
  let icon=decision?'◇':s.type==='StepGoto'?'↪':s.type==='StepStart'?'⚑':s.type==='StepEnd'?'■':s.type==='StepAssign'?'=':s.type==='StepLabel'?'⚑':s.type==='StepCallSubflow'?'⇢':call?'☎':'·';
- const cisco=window.UCCXStepIcons?.resolve(s.type,s.className);
+ const cisco=window.UCCXStepIcons?.resolve(s.config.contactSettings?'SetContactInfoStep':s.type,s.className);
  const annotation=s.comment?'<span class="step-annotation">'+esc(/^\s*\/\*/.test(s.comment)?s.comment:'/* '+s.comment+' */')+'</span>':'';
  const label=s.label&&s.type!=='StepLabel'?'<span class="step-label">'+esc(s.label)+':</span>':'';
  const outputs=(s.config.subflow?.outputs||[]).filter(p=>p.variable&&p.variable!=='null');
@@ -5979,6 +5985,8 @@ function propertyField(name,value){return '<div class="param"><span class="prope
 function scheduleClock(ms){const hour=Math.floor(ms/3600000)%24;return (hour%12||12)+':'+String(Math.floor(ms/60000)%60).padStart(2,'0')+' '+(hour<12?'AM':'PM');}
 function bindingTable(title,rows,valueKey,valueTitle){return '<h3>'+esc(title)+'</h3><table class="table"><thead><tr><th>Parameter</th><th>'+esc(valueTitle)+'</th></tr></thead><tbody>'+rows.map(p=>'<tr><td>'+esc(p.name)+'</td><td>'+esc(p[valueKey]||'—')+'</td></tr>').join('')+'</tbody></table>';}
 function propertyHTML(s){
+ if(s.config.contactSettings)return propertyField('Contact',s.config.contactSettings.contact)+'<table class="table contact-attributes"><thead><tr><th>Names</th><th>Values</th></tr></thead><tbody>'+s.config.contactSettings.attributes.map(a=>'<tr><td>'+esc(a.name)+'</td><td>'+esc(a.value||'—')+'</td></tr>').join('')+'</tbody></table>';
+
  if(s.config.switch)return propertyField('Expression',s.config.switch.expression)+propertyField('Type',s.config.switch.type||'Not decoded')+'<table class="table"><thead><tr><th>Connection</th><th>Value</th></tr></thead><tbody>'+s.config.switch.cases.map(p=>'<tr><td>'+esc(p.name)+'</td><td>'+esc(p.value)+'</td></tr>').join('')+'</tbody></table>';
  if(s.config.priority)return propertyField('Contact',s.config.priority.contact)+propertyField('Operation',s.config.priority.operation||'Not decoded ('+s.config.priority.code+')')+propertyField(s.config.priority.operation==='Assign'?'Assign Priority':'Priority expression',s.config.priority.value);
  if(s.config.enterprise){const e=s.config.enterprise;return propertyField('Contact',e.contact)+'<h3>Fields</h3><table class="table"><thead><tr><th>Values</th><th>Names</th><th>Tokens</th></tr></thead><tbody>'+e.fields.map(p=>'<tr><td>'+esc(p.value)+'</td><td>'+esc(p.name)+'</td><td>'+esc(p.token)+'</td></tr>').join('')+'</tbody></table><h3>Expanded Call Variables</h3><table class="table"><thead><tr><th>Values</th><th>Names</th><th>Type</th><th>Tokens</th></tr></thead><tbody>'+e.expanded.map(p=>'<tr><td>'+esc(p.value)+'</td><td>'+esc(p.name)+'</td><td>'+esc(p.type)+'</td><td>'+esc(p.token)+'</td></tr>').join('')+'</tbody></table>';}
