@@ -5534,6 +5534,21 @@ body:has(#uccx-viewer) main { padding:32px 0 80px; }
 #uccx-viewer .step-keyword { color:#08733b; }
 #uccx-viewer .step.active .step-keyword { color:#fff; }
 
+/* Playback controls stay outside the changing properties and trace panels. */
+#uccx-viewer .uccx-debug-controls { display:flex;align-items:center;gap:6px;min-width:0; }
+#uccx-viewer .uccx-debug-controls .btn { padding:9px 8px;font-size:11px;box-shadow:none; }
+#uccx-viewer .uccx-debug-controls #uccx-result { margin-left:auto;white-space:nowrap; }
+#uccx-viewer .uccx-sim-actions { padding:0;gap:6px;flex:none; }
+#uccx-viewer .uccx-sim-actions[hidden] { display:none; }
+#uccx-viewer #uccx-sim-play { width:68px; }
+#uccx-viewer .uccx-settings-button { width:34px;height:38px;font-size:20px!important;line-height:1; }
+#uccx-viewer .uccx-settings-dialog { width:min(520px,calc(100vw - 32px));max-height:calc(100vh - 32px);padding:0;border:1px solid var(--border);border-radius:10px;background:var(--panel);color:var(--fg);box-shadow:0 16px 60px #0008;overflow:auto;color-scheme:dark; }
+#uccx-viewer .uccx-settings-dialog::backdrop { background:#0008; }
+#uccx-viewer .uccx-settings-dialog .pane-heading { background:var(--panel);color:var(--fg);padding:10px 12px; }
+#uccx-viewer .uccx-settings-note { margin:0;padding:0 12px 12px;color:var(--muted);font-size:11px; }
+#uccx-viewer .uccx-sim-status { padding-top:12px; }
+@media(max-width:450px) { #uccx-viewer .uccx-scenario { grid-template-columns:1fr; } #uccx-viewer .uccx-debug-controls #uccx-result { font-size:10px; } }
+
 body.uccx-standalone { font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; }
 body.uccx-standalone main { width:100%;margin-left:0;padding:28px 0 40px; }
 body.uccx-standalone:not(.dark-mode) { background:var(--bg); }
@@ -5550,7 +5565,7 @@ body.uccx-standalone:not(.dark-mode) { background:var(--bg); }
               <h1>UCCX Script Viewer</h1>
               <p class="lead">Explore and walk through Cisco UCCX scripts.</p>
             </div>
-            <div class="pageHeaderActions"><button class="btn secondary" id="uccx-appearance" type="button" aria-pressed="true">Dark mode</button>
+            <div class="pageHeaderActions">
 
               <button class="btn primary" id="uccx-open" type="button">Open .aef file</button>
               <input id="uccx-file" type="file" accept=".aef" hidden />
@@ -5574,8 +5589,26 @@ body.uccx-standalone:not(.dark-mode) { background:var(--bg); }
                 <input id="uccx-search" type="search" aria-label="Search script view" placeholder="Find a step, label, comment, or expression…" />
                 <button class="btn secondary" id="uccx-debug-toggle" type="button" aria-expanded="false" aria-controls="uccx-debug">Debug</button>
               </div>
-              <span class="muted small" id="uccx-result" aria-live="polite"></span>
+              <div class="uccx-debug-controls">
+                <button class="btn secondary uccx-settings-button" id="uccx-sim-settings" type="button" aria-label="Debug settings" title="Debug settings" aria-haspopup="dialog">⚙</button>
+                  <div class="uccx-sim-actions" id="uccx-sim-actions" hidden>
+                    <button class="btn primary" id="uccx-sim-play" type="button">▶ Play</button>
+                    <button class="btn secondary" id="uccx-sim-step" type="button">Step</button>
+                    <button class="btn secondary" id="uccx-sim-reset" type="button">Reset</button>
+                  </div>
+                <span class="muted small" id="uccx-result" aria-live="polite"></span>
+              </div>
             </div>
+            <dialog class="uccx-settings-dialog" id="uccx-settings-dialog" aria-labelledby="uccx-settings-title">
+              <div class="pane-heading"><span id="uccx-settings-title">Debug settings</span><button class="btn secondary" id="uccx-settings-close" type="button" aria-label="Close debug settings">Done</button></div>
+                  <div class="uccx-scenario">
+                    <label>Scenario date &amp; time<input id="uccx-sim-datetime" type="datetime-local" step="1" /></label>
+                    <label>Primary / local time zone<input id="uccx-sim-zone" type="text" placeholder="America/New_York" /></label>
+                    <label>Calling number<input id="uccx-sim-caller" type="tel" placeholder="+15551234567" /></label>
+                    <label>Called number<input id="uccx-sim-called" type="tel" placeholder="Extension or DNIS" /></label>
+                  </div>
+              <p class="uccx-settings-note">Settings apply to the next walkthrough. Reset to change them after starting.</p>
+            </dialog>
             <div class="uccx-workspace">
               <div class="uccx-design">
                 <div class="pane-heading"><span>Script design</span></div>
@@ -5589,17 +5622,6 @@ body.uccx-standalone:not(.dark-mode) { background:var(--bg); }
                 <aside class="uccx-inspector" id="uccx-inspector" aria-label="Step properties"></aside>
                 <section class="uccx-debug" id="uccx-debug" aria-label="Local walkthrough" hidden>
                   <div class="pane-heading">Debug / Walkthrough <span class="muted">Local simulation</span></div>
-                  <div class="uccx-scenario">
-                    <label>Scenario date &amp; time<input id="uccx-sim-datetime" type="datetime-local" step="1" /></label>
-                    <label>Primary / local time zone<input id="uccx-sim-zone" type="text" placeholder="America/New_York" /></label>
-                    <label>Calling number<input id="uccx-sim-caller" type="tel" placeholder="+15551234567" /></label>
-                    <label>Called number<input id="uccx-sim-called" type="tel" placeholder="Extension or DNIS" /></label>
-                  </div>
-                  <div class="uccx-sim-actions">
-                    <button class="btn primary" id="uccx-sim-play" type="button">▶ Play</button>
-                    <button class="btn secondary" id="uccx-sim-step" type="button">Step</button>
-                    <button class="btn secondary" id="uccx-sim-reset" type="button">Reset</button>
-                  </div>
                   <div class="uccx-sim-status" id="uccx-sim-status" role="status" aria-live="polite">Set the clock and caller, then Play or Step.</div>
                   <div id="uccx-sim-pending"></div>
                   <details class="uccx-sim-trace" open><summary>Execution trace</summary><ol id="uccx-sim-trace"></ol></details>
@@ -6017,7 +6039,7 @@ const scenarioFields=['sim-datetime','sim-zone','sim-caller','sim-called'];
 function initScenario(){let now=new Date(),local=new Date(now.getTime()-now.getTimezoneOffset()*60000);$('sim-datetime').value=local.toISOString().slice(0,19);$('sim-zone').value=Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';}
 function resetSimulation(){playing=false;clearTimeout(playTimer);simulation=null;scenarioFields.forEach(id=>$(id).disabled=false);$('sim-play').textContent='▶ Play';$('sim-pending').innerHTML='';$('sim-trace').innerHTML='';$('sim-status').textContent='Set the clock and caller, then Play or Step.';root.querySelectorAll('.running').forEach(b=>b.classList.remove('running'));if(model)renderVariablePane();}
 function ensureSimulation(){if(simulation)return simulation;if(!model)throw Error('Open a script first');simulation=new window.UCCXSimulation.Simulator(model,{datetime:$('sim-datetime').value,timezone:$('sim-zone').value.trim(),caller:$('sim-caller').value,called:$('sim-called').value});scenarioFields.forEach(id=>$(id).disabled=true);renderVariablePane();return simulation;}
-function debugOpen(){root.classList.add('is-debugging');$('debug').hidden=false;$('debug-toggle').setAttribute('aria-expanded','true');}
+function debugOpen(){root.classList.add('is-debugging');$('debug').hidden=false;$('sim-actions').hidden=false;$('debug-toggle').setAttribute('aria-expanded','true');}
 function simulationUpdate(result){return preservePagePosition(()=>simulationUpdateContents(result));}
 function simulationUpdateContents(result){
  $('sim-play').textContent=playing?'Ⅱ Pause':'▶ Play';
@@ -6046,7 +6068,11 @@ function renderPending(){
  if($('sim-retry'))$('sim-retry').onclick=()=>{simulation.pending=null;runSimulationStep();};
  if($('sim-apply'))$('sim-apply').onclick=()=>{try{const name=$('sim-variable').value;if(!name)throw Error('Choose a variable');simulation.set(name,runtimeValue($('sim-value').value));simulation.log(s,'Supplied '+name+' = '+String(simulation.variables.get(name)));if(s.type==='GetReportingStatStep'&&name===s.config.resultVariable){simulation.skip();simulationUpdate();if(simulation.current!==null)navigateToStep(simulation.current);}else{renderVariablePane();$('sim-status').textContent='Value applied. Retry the step or choose an outcome.';}}catch(e){$('sim-status').textContent=e.message;}};
 }
-$('debug-toggle').onclick=()=>{let opening=$('debug').hidden;$('debug').hidden=!opening;root.classList.toggle('is-debugging',opening);$('debug-toggle').setAttribute('aria-expanded',String(opening));};
+function pauseSimulation(){playing=false;clearTimeout(playTimer);simulationUpdate();}
+$('debug-toggle').onclick=()=>{let opening=$('debug').hidden;if(opening){debugOpen();}else{pauseSimulation();$('debug').hidden=true;$('sim-actions').hidden=true;root.classList.remove('is-debugging');$('debug-toggle').setAttribute('aria-expanded','false');}};
+$('sim-settings').onclick=()=>{pauseSimulation();$('settings-dialog').showModal();};
+$('settings-close').onclick=()=>$('settings-dialog').close();
+$('settings-dialog').onclick=event=>{if(event.target===$('settings-dialog')){const bounds=$('settings-dialog').getBoundingClientRect();if(event.clientX<bounds.left||event.clientX>bounds.right||event.clientY<bounds.top||event.clientY>bounds.bottom)$('settings-dialog').close();}};
 $('sim-play').onclick=()=>{debugOpen();if(playing){playing=false;clearTimeout(playTimer);simulationUpdate();return;}try{ensureSimulation();if(simulation.pending){$('sim-status').textContent='Choose an outcome or supply a value before continuing.';return;}if(simulation.finished){$('sim-status').textContent='Reset to begin a new walkthrough.';return;}playing=true;tickSimulation();}catch(e){$('sim-status').textContent=e.message;}};
 $('sim-step').onclick=()=>{playing=false;clearTimeout(playTimer);runSimulationStep();};
 $('sim-reset').onclick=resetSimulation;
@@ -6054,7 +6080,6 @@ initScenario();
 
 })();
 
-(function(){const button=document.getElementById('uccx-appearance');button.onclick=function(){const dark=document.body.classList.toggle('dark-mode');button.setAttribute('aria-pressed',String(dark));button.textContent=dark?'Dark mode':'Light mode';};})();
 </script>
 </body>
 </html>
