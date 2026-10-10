@@ -5561,6 +5561,12 @@ body:has(#uccx-viewer) main { padding:32px 0 80px; }
 #uccx-viewer .uccx-debug-dialog { width:min(600px,calc(100vw - 32px)); }
 #uccx-viewer .uccx-debug-dialog #uccx-sim-pending { padding-bottom:12px; }
 
+#uccx-viewer .uccx-trace-dialog { width:min(700px,calc(100vw - 32px)); }
+#uccx-viewer .uccx-trace-dialog .pane-heading { display:flex;justify-content:space-between;gap:12px; }
+#uccx-viewer .uccx-trace-list { margin:0;padding:0 16px 16px 36px;font-size:12px;line-height:1.6; }
+#uccx-viewer .uccx-trace-list li { padding:4px 0;overflow-wrap:anywhere; }
+#uccx-viewer .uccx-trace-text { width:calc(100% - 24px);min-height:160px;margin:0 12px 12px;background:var(--input);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px; }
+
 body.uccx-standalone { font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; }
 body.uccx-standalone main { width:100%;margin-left:0;padding:28px 0 40px; }
 body.uccx-standalone:not(.dark-mode) { background:var(--bg); }
@@ -5602,7 +5608,7 @@ body.uccx-standalone:not(.dark-mode) { background:var(--bg); }
                 <button class="btn secondary" id="uccx-debug-toggle" type="button" aria-expanded="false" aria-controls="uccx-sim-actions">Debug</button>
               </div>
               <div class="uccx-debug-controls">
-                <button class="btn secondary uccx-settings-button" id="uccx-sim-settings" type="button" aria-label="Debug settings" title="Debug settings" aria-haspopup="dialog"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3h6l1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                <button class="btn secondary uccx-settings-button" id="uccx-sim-settings" type="button" aria-label="Debug settings" title="Debug settings" aria-haspopup="dialog"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="currentColor"><path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.63l-1.92-3.32a.49.49 0 0 0-.61-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54A.49.49 0 0 0 14 2h-4c-.25 0-.45.18-.49.42l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.61.22L2.61 8.48a.49.49 0 0 0 .12.63l2.03 1.58c-.05.31-.08.65-.08.97s.02.63.07.94l-2.03 1.58a.49.49 0 0 0-.12.63l1.92 3.32c.12.22.38.31.61.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.25.25.43.5.43h4c.25 0 .45-.18.49-.42l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.23.09.49 0 .61-.22l1.92-3.32a.49.49 0 0 0-.12-.63l-2.03-1.58zM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg></button>
                   <div class="uccx-sim-actions" id="uccx-sim-actions" hidden>
                     <button class="btn secondary" id="uccx-sim-play" type="button">▶ Play</button>
                     <button class="btn secondary" id="uccx-sim-step" type="button">Step</button>
@@ -5620,15 +5626,19 @@ body.uccx-standalone:not(.dark-mode) { background:var(--bg); }
                     <label>Called number<input id="uccx-sim-called" type="tel" placeholder="Extension or DNIS" /></label>
                     <label>Playback speed<select id="uccx-sim-speed"><option value="350">Fast · 0.35 seconds per step</option><option value="1000" selected>Normal · 1 second per step</option><option value="2000">Slow · 2 seconds per step</option><option value="3000">Slower · 3 seconds per step</option><option value="5000">Slowest · 5 seconds per step</option></select></label>
                   </div>
-              <div class="uccx-dialog-actions"><button class="btn secondary" id="uccx-trace-open" type="button">Execution trace</button></div>
               <p class="uccx-settings-note">Reset to change the date, time zone, or phone numbers after starting. Playback speed can be changed at any time.</p>
             </dialog>
                 <dialog class="uccx-settings-dialog uccx-debug-dialog" id="uccx-debug" aria-labelledby="uccx-debug-title">
                   <div class="pane-heading"><span id="uccx-debug-title">Debug / Walkthrough</span><button class="btn secondary" id="uccx-debug-close" type="button">Close / Pause</button></div>
                   <div class="uccx-sim-status" id="uccx-sim-status" role="status" aria-live="polite">Set the clock and caller, then Play or Step.</div>
                   <div id="uccx-sim-pending"></div>
-                  <details class="uccx-sim-trace" open><summary>Execution trace</summary><ol id="uccx-sim-trace"></ol></details>
                 </dialog>
+            <dialog class="uccx-settings-dialog uccx-trace-dialog" id="uccx-trace-dialog" aria-labelledby="uccx-trace-title">
+              <div class="pane-heading"><span id="uccx-trace-title">Execution steps</span><div><button class="btn secondary" id="uccx-trace-copy" type="button">Copy</button> <button class="btn secondary" id="uccx-trace-close" type="button">Close</button></div></div>
+              <p class="uccx-settings-note" id="uccx-trace-status" role="status" aria-live="polite"></p>
+              <ol class="uccx-trace-list" id="uccx-sim-trace"></ol>
+              <textarea id="uccx-trace-text" class="uccx-trace-text" aria-label="Execution steps text to copy" readonly hidden></textarea>
+            </dialog>
             <div class="uccx-workspace">
               <div class="uccx-design" id="uccx-design">
                 <div class="pane-heading"><span>Script design</span></div>
@@ -5828,7 +5838,7 @@ class Simulator {
  }
  set(name,value){if(!/^[A-Za-z_$][\w$]*$/.test(name))throw Error('Choose a valid variable name');this.variables.set(name,value);}
  evaluate(text){return expression(text,this.variables);}
- log(step,message){this.trace.push({id:step?.id,title:step?.title||'',message});if(this.trace.length>300)this.trace.shift();}
+ log(step,message){this.trace.push({id:step?.id,title:step?.title||'',message});}
  branch(step,name){let group=(this.groups.get(step.id)||[]).find(g=>g.name===name);if(!group)throw Error('Branch '+name+' was not found');this.current=group.nodes[0]?.step?.id??this.next.get(step.id);this.log(step,'Branch: '+name);}
  pause(step,message,kind='result'){this.pending={step,message,kind,branches:(this.groups.get(step.id)||[]).map(g=>g.name)};this.log(step,message);return {status:'paused',step};}
  choose(name,value){let p=this.pending;if(!p)throw Error('No choice is pending');if(p.kind==='digits'){if(!p.step.config.inputVariable)throw Error('Input variable could not be decoded');this.set(p.step.config.inputVariable,String(value??''));}this.log(p.step,'Manual outcome: '+(name||'Continue'));this.pending=null;this.branch(p.step,name);return this.current;}
@@ -6066,7 +6076,7 @@ variableDivider.onkeydown=event=>{const height=variablePane.getBoundingClientRec
 let simulation=null,playing=false,playTimer=null,resumeAfterChoice=false;
 const scenarioFields=['sim-datetime','sim-zone','sim-caller','sim-called'];
 function initScenario(){let now=new Date(),local=new Date(now.getTime()-now.getTimezoneOffset()*60000);$('sim-datetime').value=local.toISOString().slice(0,19);$('sim-zone').value=Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';}
-function resetSimulation(){resumeAfterChoice=false;if($('debug').open)$('debug').close();playing=false;clearTimeout(playTimer);simulation=null;scenarioFields.forEach(id=>$(id).disabled=false);$('sim-play').textContent='▶ Play';$('sim-pending').innerHTML='';$('sim-trace').innerHTML='';$('sim-status').textContent='Set the clock and caller, then Play or Step.';root.querySelectorAll('.running').forEach(b=>b.classList.remove('running'));if(model)renderVariablePane();}
+function resetSimulation(){if($('trace-dialog').open)$('trace-dialog').close();$('trace-text').hidden=true;resumeAfterChoice=false;if($('debug').open)$('debug').close();playing=false;clearTimeout(playTimer);simulation=null;scenarioFields.forEach(id=>$(id).disabled=false);$('sim-play').textContent='▶ Play';$('sim-pending').innerHTML='';$('sim-trace').innerHTML='';$('sim-status').textContent='Set the clock and caller, then Play or Step.';root.querySelectorAll('.running').forEach(b=>b.classList.remove('running'));if(model)renderVariablePane();}
 function ensureSimulation(){if(simulation)return simulation;if(!model)throw Error('Open a script first');simulation=new window.UCCXSimulation.Simulator(model,{datetime:$('sim-datetime').value,timezone:$('sim-zone').value.trim(),caller:$('sim-caller').value,called:$('sim-called').value});scenarioFields.forEach(id=>$(id).disabled=true);renderVariablePane();return simulation;}
 function debugOpen(){root.classList.add('is-debugging');$('sim-actions').hidden=false;$('debug-toggle').setAttribute('aria-expanded','true');}
 function simulationUpdate(result){return preservePagePosition(()=>simulationUpdateContents(result));}
@@ -6082,7 +6092,7 @@ function simulationUpdateContents(result){
  renderVariablePane();renderPending();
 }
 function runSimulationStep(){return preservePagePosition(()=>runSimulationStepContents());}
-function runSimulationStepContents(){try{debugOpen();const engine=ensureSimulation();let result=engine.step();if(result.status==='paused'){resumeAfterChoice=playing||resumeAfterChoice;playing=false;clearTimeout(playTimer);}if(result.status==='finished'){resumeAfterChoice=false;playing=false;clearTimeout(playTimer);}simulationUpdate(result);if(result.status==='paused'||result.status==='finished')showDebugDialog();return result.status;}catch(e){playing=false;$('sim-status').textContent=e.message;$('sim-play').textContent='▶ Play';showDebugDialog();return 'error';}}
+function runSimulationStepContents(){try{debugOpen();const engine=ensureSimulation();let result=engine.step();if(result.status==='paused'){resumeAfterChoice=playing||resumeAfterChoice;playing=false;clearTimeout(playTimer);}if(result.status==='finished'){resumeAfterChoice=false;playing=false;clearTimeout(playTimer);}simulationUpdate(result);if(result.status==='paused')showDebugDialog();if(result.status==='finished')showExecutionTrace();return result.status;}catch(e){playing=false;$('sim-status').textContent=e.message;$('sim-play').textContent='▶ Play';showDebugDialog();return 'error';}}
 function tickSimulation(){if(!playing)return;let status=runSimulationStep();if(playing&&status==='stepped')playTimer=setTimeout(tickSimulation,playbackDelay());}
 function runtimeValue(text){try{return JSON.parse(text);}catch{return text;}}
 function renderPending(){
@@ -6104,11 +6114,14 @@ function continueAfterChoice(){simulationUpdate();if(resumeAfterChoice&&!simulat
 $('debug-toggle').onclick=()=>{let opening=$('sim-actions').hidden;if(opening){debugOpen();}else{pauseSimulation();if($('debug').open)$('debug').close();$('sim-actions').hidden=true;root.classList.remove('is-debugging');$('debug-toggle').setAttribute('aria-expanded','false');}};
 $('debug-close').onclick=()=>{pauseSimulation();$('debug').close();};
 $('debug').oncancel=()=>{resumeAfterChoice=false;playing=false;clearTimeout(playTimer);$('sim-play').textContent='▶ Play';};
-$('trace-open').onclick=()=>{pauseSimulation();$('settings-dialog').close();showDebugDialog();};
+function executionText(){return [model?.name||'Script walkthrough','',...(simulation?.trace||[]).map((entry,index)=>(index+1)+'. '+entry.title+' — '+entry.message)].join('\n');}
+function showExecutionTrace(){pauseSimulation();$('trace-status').textContent=simulation?.trace.length?'All execution steps from this walkthrough.':'No steps yet. Use Play or Step to begin.';$('trace-text').hidden=true;$('trace-copy').textContent='Copy';if(!$('trace-dialog').open)$('trace-dialog').showModal();}
+$('trace-close').onclick=()=>$('trace-dialog').close();
+$('trace-copy').onclick=async()=>{const text=executionText();try{await navigator.clipboard.writeText(text);$('trace-copy').textContent='Copied';$('trace-status').textContent='Copied execution steps to the clipboard.';}catch{const field=$('trace-text');field.value=text;field.hidden=false;field.focus();field.select();$('trace-status').textContent='Select the text below and copy it with Command+C or Ctrl+C.';}};
 $('sim-settings').onclick=()=>{pauseSimulation();$('settings-dialog').showModal();};
 $('settings-close').onclick=()=>$('settings-dialog').close();
 $('settings-dialog').onclick=event=>{if(event.target===$('settings-dialog')){const bounds=$('settings-dialog').getBoundingClientRect();if(event.clientX<bounds.left||event.clientX>bounds.right||event.clientY<bounds.top||event.clientY>bounds.bottom)$('settings-dialog').close();}};
-$('sim-play').onclick=()=>{debugOpen();if(playing){playing=false;clearTimeout(playTimer);simulationUpdate();return;}try{ensureSimulation();if(simulation.pending){resumeAfterChoice=true;renderPending();showDebugDialog();return;}if(simulation.finished){$('sim-status').textContent='Reset to begin a new walkthrough.';showDebugDialog();return;}playing=true;tickSimulation();}catch(e){$('sim-status').textContent=e.message;showDebugDialog();}};
+$('sim-play').onclick=()=>{debugOpen();if(playing){playing=false;clearTimeout(playTimer);simulationUpdate();return;}try{ensureSimulation();if(simulation.pending){resumeAfterChoice=true;renderPending();showDebugDialog();return;}if(simulation.finished){showExecutionTrace();return;}playing=true;tickSimulation();}catch(e){$('sim-status').textContent=e.message;showDebugDialog();}};
 $('sim-step').onclick=()=>{resumeAfterChoice=false;playing=false;clearTimeout(playTimer);runSimulationStep();};
 $('sim-reset').onclick=resetSimulation;
 initScenario();
